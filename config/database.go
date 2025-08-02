@@ -8,6 +8,8 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"backend-kking/backend/models"
 )
 
 var DB *gorm.DB
@@ -25,12 +27,26 @@ func ConnectDB() {
 		os.Getenv("DB_NAME"),
 		os.Getenv("DB_PORT"),
 	)
-	
+
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Gagal konek ke database:\nDSN: %s\nError: %v", dsn, err)
 	}
 
 	log.Println("Berhasil konek ke database.")
+
+	db.AutoMigrate(
+		&models.User{},
+		&models.Product{},
+		&models.CartItem{},
+		&models.Order{},
+		&models.OrderItem{},
+		&models.Transaction{},
+		&models.Topup{},
+	)
+	if err != nil {
+		log.Fatalf("Gagal melakukan migrasi database: %v", err)
+	}
+
 	DB = db
 }
