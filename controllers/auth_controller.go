@@ -46,38 +46,44 @@ func Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Registrasi berhasil"})
 }
 
+
 func Login(c *gin.Context) {
 	var input struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "input tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Input tidak valid"})
 		return
 	}
 
 	var user models.User
 	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "email tidak ditemukan"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Email tidak ditemukan"})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "password salah "})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Password salah"})
 		return
 	}
 
-	//init jwt
-	claims := jwt.MapClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		"role":    user.Role, 
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+	})
+
 	tokenStr, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat token"})
 		return
 	}
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("Authorization", tokenStr, 3600*24, "/", "", false, true)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login berhasil",
 		"token":   tokenStr,
