@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"backend-kking/backend/models"
+	"backend-kking/backend/seeders"
 )
 
 var DB *gorm.DB
@@ -35,6 +36,12 @@ func ConnectDB() {
 
 	log.Println("Berhasil konek ke database.")
 
+	if err != nil {
+		log.Fatalf("Gagal melakukan migrasi database: %v", err)
+	}
+	
+	DB = db
+	
 	db.AutoMigrate(
 		&models.User{},
 		&models.Product{},
@@ -44,9 +51,5 @@ func ConnectDB() {
 		&models.Transaction{},
 		&models.Topup{},
 	)
-	if err != nil {
-		log.Fatalf("Gagal melakukan migrasi database: %v", err)
-	}
-
-	DB = db
+	seeders.SeedAdminUser(DB)
 }
